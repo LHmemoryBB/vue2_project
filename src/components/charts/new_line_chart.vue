@@ -146,23 +146,31 @@ export default {
   },
   computed: {
     series() {
-      var vm = this.vm;
       var list = this.vm.names;
-      var values = vm.values;
-      var series = [];
-      for (let i = 0; i < list.length; i++) {
-        let data = [];
-        for (let j = 0; j < values.length; j++) {
-          data.push(values[j][i]);
-        }
-        let dict_type = {
-          name: list[i],
-          type: "line",
-          data: data,
-        };
-        series.push(dict_type);
-      }
+      var values = this.vm.values;
+	  console.log(list, values);
+	
+		const series = list.map((e, index) =>{
+			return {
+				name: list[index],
+				data: values[index],
+				type: 'line',
+			}
+		})
+    //   for (let i = 0; i < list.length; i++) {
+    //     let data = [];
+    //     for (let j = 0; j < values.length; j++) {
+    //       data.push(values[j][i]);
+    //     }
+    //     let dict_type = {
+    //       name: list[i],
+    //       type: "line",
+    //       data: data,
+    //     };
+    //     series.push(dict_type);
+    //   }
 
+	  console.log(series, 'series');
       return series;
     },
   },

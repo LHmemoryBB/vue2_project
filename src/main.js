@@ -6,7 +6,10 @@ import plugins from './plugins'
 import router from './router'
 import store from './store'
 import echarts from './assets/js/echarts.min.js'
+import dayjs from 'dayjs'
 
+
+Vue.prototype.$dayJs = dayjs
 Vue.config.productionTip = false;
 Vue.prototype.$axios = axios;
 Vue.use(plugins, {

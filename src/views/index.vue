@@ -18,27 +18,32 @@
           <!--					</el-col>-->
         </el-row>
 
-        <el-row>
-          <el-col
-            v-if="
-              user_group == '管理员' ||
-              $check_figure('/attraction_reservation/table')
-            "
-            :span="8"
-          >
-            <div class="card chart">
-              <newLineChart
-                v-if="line_obj_attraction_reservation.values.length > 0"
-                id="line_obj_attraction_reservation"
-                :vm="line_obj_attraction_reservation"
-                :title="'景点预约统计'"
-              >
-              </newLineChart>
-              <div v-if="!line_obj_attraction_reservation.values.length">
-                景点预约没有符合条件的数据
+        <el-row v-if="showChart">
+          <span v-for="(cityData, cityName) in echartsLineData" :key="cityName">
+            <el-col
+              v-if="
+                user_group == '管理员' ||
+                $check_figure('/attraction_reservation/table')
+              "
+              :span="8"
+            >
+              <div class="card">
+                <span class="chart">
+                  <newLineChart
+                    :id="`line_obj_attraction_reservation${cityName}`"
+                    :vm="cityData"
+                    :title="`${cityName}景点预约人数统计`"
+                  >
+                  </newLineChart>
+                </span>
+
+                <div v-if="!line_obj_attraction_reservation.values.length">
+                  景点预约没有符合条件的数据
+                </div>
               </div>
-            </div>
-          </el-col>
+            </el-col>
+          </span>
+
           <!-- <el-col
             v-if="
               user_group == '管理员' ||
@@ -101,6 +106,7 @@ export default {
   data() {
     return {
       activeName: "third",
+      showChart: false,
       line_obj_attraction_reservation: {
         names: [],
         xAxis: [],
@@ -117,6 +123,7 @@ export default {
         xAxis: [],
         values: [],
       },
+      echartsLineData: {},
       url_user_count: "~/api/user/count?",
       url_article_hits: "~/api/article/sum?field=hits",
     };
@@ -249,6 +256,7 @@ export default {
       names_flag,
       xAxis_flag
     ) {
+      const promiseList = [];
       let data_str = '{"' + v1 + '":"","' + v2 + '":""}';
       let data = JSON.parse(data_str);
       let user_group = this.$store.state.user.user_group;
@@ -275,58 +283,64 @@ export default {
           j < this.line_obj_attraction_reservation.names.length;
           j++
         ) {
-          data[v2] = this.line_obj_attraction_reservation.xAxis[i];
-          data[v1] = this.line_obj_attraction_reservation.names[j];
-          await this.$get(
-            "~/api/attraction_reservation/sum?field=number_of_reservations",
-            data,
-            (json) => {
+          let promises = new Promise((resolve, reject) => {
+            data[v2] = this.line_obj_attraction_reservation.xAxis[i];
+            data[v1] = this.line_obj_attraction_reservation.names[j];
+            this.$get(
+              "~/api/attraction_reservation/sum?field=number_of_reservations",
+              data
+            ).then((json) => {
               if (json.result) {
                 list[j] = json.result;
               } else {
                 list[j] = 0;
               }
-            }
-          );
+              resolve({});
+            });
+          });
+          promiseList.push(promises);
         }
         this.line_obj_attraction_reservation.values.push(list);
       }
-      console.log(
-        this.line_obj_attraction_reservation,
-        JSON.parse(JSON.stringify(this.line_obj_attraction_reservation)),
-        this.attractionCitiesMap,
-        "最终数据"
-      );
-      setTimeout(() => {
-        const citydata = JSON.parse(
-          JSON.stringify(this.line_obj_attraction_reservation)
-        );
+      Promise.all(promiseList).then(() => {
+        console.log(this.line_obj_attraction_reservation.xAxis, "原始数据");
+        console.log(this.attractionCitiesMap, "数据对比");
+        // 处理获取后的数据
+        const splitData = {};
 
-        const citiesMapping = {
-          九江市: [],
-          上饶市: [],
-          南昌市: [],
-        };
+        for (const city in this.attractionCitiesMap) {
+          const attractions = this.attractionCitiesMap[city];
+          let cityData = {
+            names: [],
+            values: [],
+            xAxis: this.line_obj_attraction_reservation.xAxis,
+          };
 
-        // 根据市名将景点数据进行分组
-        citydata.names.forEach((attraction, index) => {
-          const city = citydata.xAxis[index];
-          if (citiesMapping[city]) {
-            citiesMapping[city].push({
-              name: attraction,
-              values: citydata.values[index],
-            });
-          }
-        });
+          attractions.forEach((attraction, cityIndex) => {
+            const index =
+              this.line_obj_attraction_reservation.names.indexOf(attraction);
+            if (index !== -1) {
+              cityData.names.push(attraction);
+              //   cityData.values.push(
+              //     this.line_obj_attraction_reservation.values.map
+              //   );
+              cityData.values[cityIndex] =
+                this.line_obj_attraction_reservation.values.map(
+                  (e) => e[index]
+                );
+              //   cityData.xAxis.push(
+              //     ...this.line_obj_attraction_reservation.xAxis
+              //   ); // 将日期数据填充进去，注意根据实际需求调整
+            }
+          });
+          console.log(cityData, "cityData");
+          splitData[city] = cityData;
+        }
 
-        // 将分组后的数据按照提供的市名顺序组成新的数据结构
-        const groupedData = Object.keys(citiesMapping).map((city) => ({
-          city,
-          attractions: citiesMapping[city],
-        }));
-
-        console.log(groupedData);
-      }, 1000);
+        console.log(splitData, "处理后的数据");
+        this.echartsLineData = splitData;
+        this.showChart = true;
+      });
 
       if (names_flag) {
         this.get_nickname(this.line_obj_attraction_reservation.names, true);
