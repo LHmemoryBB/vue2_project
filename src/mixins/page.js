@@ -455,6 +455,7 @@ export default {
          * @param {Object} value 要添加的数据
          */
         add_main: function add_main(value, func) {
+            console.log('sadadasdasdsadsa');
             var url = this.url ? this.url + "method=add" : this.url_add;
             if (!url) {
                 return;
@@ -811,6 +812,7 @@ export default {
         submit: function submit(param, func) {
             // console.log('提交事件', param);
             if (!param) {
+                console.log(this.form);
                 param = this.form;
             }
             // 提交前事件

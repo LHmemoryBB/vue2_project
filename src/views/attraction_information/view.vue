@@ -263,6 +263,37 @@
         <el-col
           v-if="
             user_group === '管理员' ||
+            $check_field('get', 'appointment_points') ||
+            $check_field('add', 'appointment_points') ||
+            $check_field('set', 'appointment_points')
+          "
+          :xs="24"
+          :sm="12"
+          :lg="8"
+          class="el_form_item_warp"
+        >
+          <el-form-item label="设置预约时间" prop="appointment_points">
+            <el-button
+              id="appointment_points"
+              v-if="
+                user_group === '管理员' ||
+                (form['attraction_information_id'] &&
+                  $check_field('set', 'appointment_points')) ||
+                (!form['attraction_information_id'] &&
+                  $check_field('add', 'appointment_points'))
+              "
+              :disabled="disabledObj['appointment_points_isDisabled']"
+              @click="openSetTimeDialog = true"
+              icon="el-icon-setting"
+            ></el-button>
+            <div v-else-if="$check_field('get', 'appointment_points')">
+              {{ form["appointment_points"] }}
+            </div>
+          </el-form-item>
+        </el-col>
+        <el-col
+          v-if="
+            user_group === '管理员' ||
             $check_field('get', 'tourist_attraction_routes') ||
             $check_field('add', 'tourist_attraction_routes') ||
             $check_field('set', 'tourist_attraction_routes')
@@ -344,6 +375,7 @@
             </el-image>
           </el-form-item>
         </el-col>
+
         <el-col
           v-if="
             user_group === '管理员' ||
@@ -391,6 +423,43 @@
         </el-form-item>
       </el-col>
     </el-form>
+    <el-dialog title="提示" :visible.sync="openSetTimeDialog" width="30%">
+      <el-form ref="form" :model="time_obj" label-width="100px">
+        <el-form-item label="时间段">
+          <el-input v-model="timeSlot" placeholder="请输入时间段"></el-input>
+        </el-form-item>
+        <el-form-item label="预约上限人数">
+          <el-input
+            v-model.number="maxPeople"
+            placeholder="请输入预约上限人数"
+          ></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="addTimeSlot">添加</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-divider></el-divider>
+
+      <el-table :data="timeSlots" border>
+        <el-table-column prop="timeSlot" label="时间段"></el-table-column>
+        <el-table-column
+          prop="maxPeople"
+          label="预约上限人数"
+        ></el-table-column>
+        <el-table-column label="操作">
+          <template slot-scope="scope">
+            <el-button type="text" @click="removeTimeSlot(scope.$index)"
+              >删除</el-button
+            >
+          </template>
+        </el-table-column>
+      </el-table>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="openSetTimeDialog = false">取 消</el-button>
+        <el-button type="primary" @click="submitTime">确 定</el-button>
+      </span>
+    </el-dialog>
   </el-main>
 </template>
 
@@ -406,11 +475,15 @@ export default {
       url_set: "~/api/attraction_information/set?",
       url_get_obj: "~/api/attraction_information/get_obj?",
       url_upload: "~/api/attraction_information/upload?",
-
+      openSetTimeDialog: false,
       query: {
         attraction_information_id: 0,
       },
-
+      time_obj:{
+        timeSlots:[]
+      },
+      timeSlot:'',
+      maxPeople:'',
       form: {
         attraction_name: "", // 景点名称
         types_of_attractions: "", // 景点类型
@@ -424,6 +497,18 @@ export default {
         cover_photo: "", // 封面图片
         introduction_to_scenic_spots: "", // 景点简介
         attraction_information_id: 0, // ID
+        timeObj: {
+          timeSlots: [
+            {
+              timeSlot: "10:00-12:00",
+              maxPeople: 100,
+            },
+            {
+              timeSlot: "14:00-16:00",
+              maxPeople: 150,
+            },
+          ],
+        },
       },
       disabledObj: {
         attraction_name_isDisabled: false,
@@ -443,6 +528,11 @@ export default {
       list_types_of_attractions: [""],
     };
   },
+  computed: {
+    timeSlots() {
+      return this.time_obj.timeSlots;
+    }
+  },
   methods: {
     /**
      * 获取景点类型列表
@@ -455,7 +545,21 @@ export default {
         console.error(json.error);
       }
     },
-
+    addTimeSlot() {
+      if (this.timeSlot && this.maxPeople) {
+        this.time_obj.timeSlots.push({
+          timeSlot: this.timeSlot,
+          maxPeople: this.maxPeople
+        });
+        this.timeSlot = '';
+        this.maxPeople = '';
+      } else {
+        this.$message.error('请填写完整信息');
+      }
+    },
+    removeTimeSlot(index) {
+      this.time_obj.timeSlots.splice(index, 1);
+    },
     /**
      * 上传封面图片
      * @param {Object} param 图片参数
@@ -553,6 +657,10 @@ export default {
      */
     uploadimg(param) {
       this.uploadFile(param.file, "avatar");
+    },
+    submitTime() {
+      this.form.timeObj = JSON.stringify(this.time_obj)
+      console.log(this.form);
     },
   },
   created() {

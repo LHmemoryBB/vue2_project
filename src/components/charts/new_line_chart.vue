@@ -148,13 +148,13 @@ export default {
     series() {
       var list = this.vm.names;
       var values = this.vm.values;
-	  console.log(list, values);
 	
 		const series = list.map((e, index) =>{
 			return {
 				name: list[index],
 				data: values[index],
 				type: 'line',
+        smooth: true
 			}
 		})
     //   for (let i = 0; i < list.length; i++) {

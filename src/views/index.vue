@@ -36,53 +36,10 @@
                   >
                   </newLineChart>
                 </span>
-
-                <div v-if="!line_obj_attraction_reservation.values.length">
-                  景点预约没有符合条件的数据
-                </div>
               </div>
             </el-col>
           </span>
-
-          <!-- <el-col
-            v-if="
-              user_group == '管理员' ||
-              $check_figure('/homestay_reservation/table')
-            "
-            :span="8"
-          >
-            <div class="card chart">
-              <stackedHorizontalBarChart
-                v-if="bar_obj_homestay_reservation.values.length > 0"
-                id="bar_obj_homestay_reservation"
-                :vm="bar_obj_homestay_reservation"
-                :title="'民宿预约统计'"
-              >
-              </stackedHorizontalBarChart>
-              <div v-if="!bar_obj_homestay_reservation.values.length">
-                民宿预约没有符合条件的数据
-              </div>
-            </div>
-          </el-col> -->
-          <!-- <el-col
-            v-if="
-              user_group == '管理员' || $check_figure('/product_exchange/table')
-            "
-            :span="8"
-          >
-            <div class="card chart">
-              <newBarChart
-                v-if="bar_obj_product_exchange.values.length > 0"
-                id="bar_obj_product_exchange"
-                :vm="bar_obj_product_exchange"
-                :title="'商品兑换统计'"
-              >
-              </newBarChart>
-              <div v-if="!bar_obj_product_exchange.values.length">
-                商品兑换没有符合条件的数据
-              </div>
-            </div>
-          </el-col> -->
+          <div v-if="!showChart">景点预约没有符合条件的数据</div>
         </el-row>
       </div>
     </div>
@@ -129,12 +86,8 @@ export default {
     };
   },
   created() {
-    // 执行景点预约数据获取
+    console.log('1232132312');
     this.get_list_attraction_reservation();
-    // 执行民宿预约数据获取
-    this.get_list_homestay_reservation();
-    // 执行商品兑换数据获取
-    this.get_list_product_exchange();
   },
   mounted() {},
   methods: {
@@ -167,7 +120,7 @@ export default {
     },
     // 获取景点预约统计图数据
     async get_list_attraction_reservation() {
-      let group_by_value = "attraction_name";
+      let group_by_value = "appointment_time";
       let data = {};
       let flag = false;
       let user_group = this.$store.state.user.user_group;
@@ -183,33 +136,66 @@ export default {
           data.sqlwhere = sqlwhere;
         }
       }
-      await this.$get(
-        "~/api/attraction_reservation/get_list?groupby=" + group_by_value,
-        data,
-        (json) => {
-          if (json.result) {
-            let list = json.result.list;
-            let name_list = [];
-            for (let i = 0; i < list.length; i++) {
-              name_list.push(list[i].attraction_name);
-            }
-            list.forEach((item) => {
-              const city = item.attraction_cities;
-              const name = item.attraction_name;
-              // 如果当前城市不存在于统计对象中，则创建一个空数组
-              if (!this.attractionCitiesMap[city]) {
-                this.attractionCitiesMap[city] = [];
-              }
-              // 如果当前景点名称不存在于当前城市的数组中，则添加到数组中
-              if (!this.attractionCitiesMap[city].includes(name)) {
-                this.attractionCitiesMap[city].push(name);
+      await this.$get("~/api/attraction_reservation/get_list", data, (json) => {
+        console.log(json,'api/attraction_reservation');
+        const arr = json.result.list.map((e) => {
+          return {
+            appointment_time: e.appointment_time,
+            attraction_name: e.attraction_name,
+            attraction_cities: e.attraction_cities,
+            number_of_reservations: e.number_of_reservations,
+          };
+        });
+        const list = arr;
+        let attractionCitiesMap = {};
+        list.forEach((item) => {
+          const city = item.attraction_cities;
+          const name = item.attraction_name;
+          // 如果当前城市不存在于统计对象中，则创建一个空数组
+          if (!attractionCitiesMap[city]) {
+            attractionCitiesMap[city] = [];
+          }
+          // 如果当前景点名称不存在于当前城市的数组中，则添加到数组中
+          if (!attractionCitiesMap[city].includes(name)) {
+            attractionCitiesMap[city].push(name);
+          }
+        });
+        console.log(attractionCitiesMap, "attractionCitiesMap");
+        const xAxis = [];
+        for (let index = 0; index < 12; index++) {
+          xAxis.push(this.$dayJs().subtract(index, "month").format("YYYY-MM"));
+        }
+        console.log(xAxis);
+        const splitData = {};
+        for (const city in attractionCitiesMap) {
+          const attractions = attractionCitiesMap[city];
+          let cityData = {
+            names: attractions,
+            values: Array.from({ length: attractions.length }, () =>
+              new Array(xAxis.length).fill(0)
+            ),
+            xAxis: xAxis,
+          };
+          xAxis.forEach((date, dateIndex) => {
+            list.forEach((attraction, cityIndex) => {
+              if (attraction.attraction_cities === city) {
+                const index = attractions.indexOf(attraction.attraction_name);
+                if (
+                  this.$dayJs(attraction.appointment_time).format("YYYY-DD") ===
+                  date
+                ) {
+                  cityData.values[index][dateIndex] +=
+                    attraction.number_of_reservations;
+                }
               }
             });
-            this.line_obj_attraction_reservation.names = name_list;
-            this.get_list_attraction_reservation_sub("attraction_name", flag);
-          }
+          });
+          splitData[city] = cityData;
+          this.echartsLineData = splitData;
+          console.log(this.echartsLineData);
+          this.showChart = true;
         }
-      );
+      });
     },
     async get_list_attraction_reservation_sub(v1, names_flag) {
       let data = {};
