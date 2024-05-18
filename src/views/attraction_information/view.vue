@@ -68,8 +68,7 @@
                 :key="o['types_of_attractions']"
                 :label="o['types_of_attractions']"
                 :value="o['types_of_attractions']"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
             <div v-else-if="$check_field('get', 'types_of_attractions')">
               {{ form["types_of_attractions"] }}
@@ -342,7 +341,7 @@
               class="avatar-uploader"
               drag
               accept="image/gif, image/jpeg, image/png, image/jpg"
-              action=""
+              action
               :http-request="upload_cover_photo"
               :show-file-list="false"
               v-if="
@@ -398,8 +397,7 @@
                 (!form['attraction_information_id'] &&
                   $check_field('add', 'introduction_to_scenic_spots'))
               "
-            >
-            </quill-editor>
+            ></quill-editor>
             <div
               v-else-if="$check_field('get', 'introduction_to_scenic_spots')"
               v-html="form['introduction_to_scenic_spots']"
@@ -424,9 +422,25 @@
       </el-col>
     </el-form>
     <el-dialog title="提示" :visible.sync="openSetTimeDialog" width="30%">
-      <el-form ref="form" :model="time_obj" label-width="100px">
-        <el-form-item label="时间段">
-          <el-input v-model="timeSlot" placeholder="请输入时间段"></el-input>
+      <!-- <el-form ref="form" :model="time_obj" label-width="120px" :inline="true">
+        <el-form-item label="时间段" style="display: flex;" class="time-select-css">
+          <el-time-picker
+            v-model="time_obj.start_time"
+            :picker-options="{
+              selectableRange: '18:30:00 - 20:30:00',
+            }"
+            placeholder="开始时间"
+          >
+          </el-time-picker>
+          <el-time-picker
+            arrow-control
+            v-model="time_obj.end_time"
+            :picker-options="{
+              selectableRange: '18:30:00 - 20:30:00',
+            }"
+            placeholder="结束时间"
+          >
+          </el-time-picker>
         </el-form-item>
         <el-form-item label="预约上限人数">
           <el-input
@@ -437,19 +451,46 @@
         <el-form-item>
           <el-button type="primary" @click="addTimeSlot">添加</el-button>
         </el-form-item>
+      </el-form> -->
+      <el-form ref="form" label-width="80px">
+        <el-form-item label="活动时间">
+          <el-col :span="11">
+            <el-time-picker
+              type="date"
+              placeholder="开始时间"
+              v-model="start_time"
+              style="width: 100%"
+            ></el-time-picker>
+          </el-col>
+          <el-col class="line" :span="2">-</el-col>
+          <el-col :span="11">
+            <el-time-picker
+              placeholder="结束时间"
+              v-model="end_time"
+              style="width: 100%"
+            ></el-time-picker>
+          </el-col>
+        </el-form-item>
+        <el-form-item label="人数上限">
+          <el-input v-model="maximum"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="addTimeSlot">添加</el-button>
+        </el-form-item>
       </el-form>
 
       <el-divider></el-divider>
 
-      <el-table :data="timeSlots" border>
-        <el-table-column prop="timeSlot" label="时间段"></el-table-column>
+      <el-table :data="time_obj" border>
+        <el-table-column prop="start_time" label="开始时间"></el-table-column>
+        <el-table-column prop="end_time" label="结束时间"></el-table-column>
         <el-table-column
-          prop="maxPeople"
+          prop="maximum"
           label="预约上限人数"
         ></el-table-column>
         <el-table-column label="操作">
           <template slot-scope="scope">
-            <el-button type="text" @click="removeTimeSlot(scope.$index)"
+            <el-button type="text" @click="removeTimeSlot(scope.$index, scope.row)"
               >删除</el-button
             >
           </template>
@@ -479,11 +520,13 @@ export default {
       query: {
         attraction_information_id: 0,
       },
-      time_obj:{
-        timeSlots:[]
-      },
-      timeSlot:'',
-      maxPeople:'',
+      time_obj: [],
+      start_time:'',
+      end_time: '',
+      maximum:'',
+      timeSlot: "",
+      maxPeople: "",
+      delList:[],
       form: {
         attraction_name: "", // 景点名称
         types_of_attractions: "", // 景点类型
@@ -497,18 +540,7 @@ export default {
         cover_photo: "", // 封面图片
         introduction_to_scenic_spots: "", // 景点简介
         attraction_information_id: 0, // ID
-        timeObj: {
-          timeSlots: [
-            {
-              timeSlot: "10:00-12:00",
-              maxPeople: 100,
-            },
-            {
-              timeSlot: "14:00-16:00",
-              maxPeople: 150,
-            },
-          ],
-        },
+        time_obj:[]
       },
       disabledObj: {
         attraction_name_isDisabled: false,
@@ -528,10 +560,8 @@ export default {
       list_types_of_attractions: [""],
     };
   },
-  computed: {
-    timeSlots() {
-      return this.time_obj.timeSlots;
-    }
+  watch:{
+    
   },
   methods: {
     /**
@@ -546,19 +576,22 @@ export default {
       }
     },
     addTimeSlot() {
-      if (this.timeSlot && this.maxPeople) {
-        this.time_obj.timeSlots.push({
-          timeSlot: this.timeSlot,
-          maxPeople: this.maxPeople
+      if (this.start_time && this.end_time && this.maximum) {
+        this.time_obj.push({
+          start_time: this.$dayJs(this.start_time).format('HH:mm:ss'),
+          end_time: this.$dayJs(this.end_time).format('HH:mm:ss'),
+          maximum: this.maximum
         });
-        this.timeSlot = '';
-        this.maxPeople = '';
+        console.log(this.time_obj);
       } else {
-        this.$message.error('请填写完整信息');
+        this.$message.error("请填写完整信息");
       }
     },
-    removeTimeSlot(index) {
-      this.time_obj.timeSlots.splice(index, 1);
+    removeTimeSlot(index, row) {
+      if (row.time_slots_id) {
+        this.delList.push(row)
+      }
+      this.time_obj.splice(index, 1);
     },
     /**
      * 上传封面图片
@@ -588,6 +621,8 @@ export default {
           });
         });
       }
+      this.time_obj = this.form.time_obj
+      console.log(form,'123123', this.form, '12312312312312');
       $.db.del("form");
 
       return param;
@@ -659,8 +694,19 @@ export default {
       this.uploadFile(param.file, "avatar");
     },
     submitTime() {
-      this.form.timeObj = JSON.stringify(this.time_obj)
-      console.log(this.form);
+      
+      this.form.time_obj = this.time_obj;
+      if (this.form.attraction_information_id) {
+        this.form.time_obj.forEach(e =>{
+          e.attraction_id = this.form.attraction_information_id
+        })
+      }
+      this.delList.forEach(e =>{
+        this.$get(`~/api/attraction_information/delTime?time_slots_id=${e.time_slots_id}`,(res)=>{
+          console.log(res);
+        })
+      })
+      this.openSetTimeDialog = false
     },
   },
   created() {
@@ -669,7 +715,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .avatar-uploader .el-upload {
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
@@ -677,6 +723,8 @@ export default {
   position: relative;
   overflow: hidden;
 }
+
+/* // .time-select-css /deep/  */
 
 .avatar-uploader .el-upload:hover {
   border-color: #409eff;

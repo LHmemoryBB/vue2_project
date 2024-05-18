@@ -1,3 +1,4 @@
+<!-- 后台管理首页 -->
 <template>
   <div class="page_root" id="root_index">
     <div class="warp">
@@ -33,8 +34,7 @@
                     :id="`line_obj_attraction_reservation${cityName}`"
                     :vm="cityData"
                     :title="`${cityName}景点预约人数统计`"
-                  >
-                  </newLineChart>
+                  ></newLineChart>
                 </span>
               </div>
             </el-col>
@@ -58,7 +58,7 @@ export default {
     newBarChart,
     newLineChart,
     stackedHorizontalBarChart,
-    div_label,
+    div_label
   },
   data() {
     return {
@@ -67,26 +67,26 @@ export default {
       line_obj_attraction_reservation: {
         names: [],
         xAxis: [],
-        values: [],
+        values: []
       },
       attractionCitiesMap: {},
       bar_obj_homestay_reservation: {
         names: [],
         xAxis: [],
-        values: [],
+        values: []
       },
       bar_obj_product_exchange: {
         names: [],
         xAxis: [],
-        values: [],
+        values: []
       },
       echartsLineData: {},
       url_user_count: "~/api/user/count?",
-      url_article_hits: "~/api/article/sum?field=hits",
+      url_article_hits: "~/api/article/sum?field=hits"
     };
   },
   created() {
-    console.log('1232132312');
+    console.log("1232132312");
     this.get_list_attraction_reservation();
   },
   mounted() {},
@@ -97,7 +97,7 @@ export default {
           await this.$get(
             "~/api/user/get_obj?user_id=" + list[i],
             null,
-            (json) => {
+            json => {
               if (json.result) {
                 list[i] = json.result.obj.nickname;
               }
@@ -109,7 +109,7 @@ export default {
           await this.$get(
             "~/api/user/get_obj?user_id=" + list[i].name,
             null,
-            (json) => {
+            json => {
               if (json.result) {
                 list[i].name = json.result.obj.nickname;
               }
@@ -136,19 +136,19 @@ export default {
           data.sqlwhere = sqlwhere;
         }
       }
-      await this.$get("~/api/attraction_reservation/get_list", data, (json) => {
-        console.log(json,'api/attraction_reservation');
-        const arr = json.result.list.map((e) => {
+      await this.$get("~/api/attraction_reservation/get_list", data, json => {
+        console.log(json, "api/attraction_reservation");
+        const arr = json.result.list.map(e => {
           return {
             appointment_time: e.appointment_time,
             attraction_name: e.attraction_name,
             attraction_cities: e.attraction_cities,
-            number_of_reservations: e.number_of_reservations,
+            number_of_reservations: e.number_of_reservations
           };
         });
         const list = arr;
         let attractionCitiesMap = {};
-        list.forEach((item) => {
+        list.forEach(item => {
           const city = item.attraction_cities;
           const name = item.attraction_name;
           // 如果当前城市不存在于统计对象中，则创建一个空数组
@@ -163,7 +163,11 @@ export default {
         console.log(attractionCitiesMap, "attractionCitiesMap");
         const xAxis = [];
         for (let index = 0; index < 12; index++) {
-          xAxis.push(this.$dayJs().subtract(index, "month").format("YYYY-MM"));
+          xAxis.unshift(
+            this.$dayJs()
+              .subtract(index, "month")
+              .format("YYYY-MM")
+          );
         }
         console.log(xAxis);
         const splitData = {};
@@ -174,14 +178,14 @@ export default {
             values: Array.from({ length: attractions.length }, () =>
               new Array(xAxis.length).fill(0)
             ),
-            xAxis: xAxis,
+            xAxis: xAxis
           };
           xAxis.forEach((date, dateIndex) => {
             list.forEach((attraction, cityIndex) => {
               if (attraction.attraction_cities === city) {
                 const index = attractions.indexOf(attraction.attraction_name);
                 if (
-                  this.$dayJs(attraction.appointment_time).format("YYYY-DD") ===
+                  this.$dayJs(attraction.appointment_time).format("YYYY-MM") ===
                   date
                 ) {
                   cityData.values[index][dateIndex] +=
@@ -216,7 +220,7 @@ export default {
       await this.$get(
         "~/api/attraction_reservation/get_list?groupby=appointment_time",
         data,
-        (json) => {
+        json => {
           if (json.result) {
             let list = json.result.list;
             let xAxis_list = [];
@@ -275,7 +279,7 @@ export default {
             this.$get(
               "~/api/attraction_reservation/sum?field=number_of_reservations",
               data
-            ).then((json) => {
+            ).then(json => {
               if (json.result) {
                 list[j] = json.result;
               } else {
@@ -299,21 +303,23 @@ export default {
           let cityData = {
             names: [],
             values: [],
-            xAxis: this.line_obj_attraction_reservation.xAxis,
+            xAxis: this.line_obj_attraction_reservation.xAxis
           };
 
           attractions.forEach((attraction, cityIndex) => {
-            const index =
-              this.line_obj_attraction_reservation.names.indexOf(attraction);
+            const index = this.line_obj_attraction_reservation.names.indexOf(
+              attraction
+            );
             if (index !== -1) {
               cityData.names.push(attraction);
               //   cityData.values.push(
               //     this.line_obj_attraction_reservation.values.map
               //   );
-              cityData.values[cityIndex] =
-                this.line_obj_attraction_reservation.values.map(
-                  (e) => e[index]
-                );
+              cityData.values[
+                cityIndex
+              ] = this.line_obj_attraction_reservation.values.map(
+                e => e[index]
+              );
               //   cityData.xAxis.push(
               //     ...this.line_obj_attraction_reservation.xAxis
               //   ); // 将日期数据填充进去，注意根据实际需求调整
@@ -366,11 +372,11 @@ export default {
           "&groupby=" +
           group_by_value,
         data,
-        (json) => {
+        json => {
           if (json.result) {
             let xAxis = [];
             let values = [];
-            json.result.list.map((o) => {
+            json.result.list.map(o => {
               if (date_flag === "日期") {
                 xAxis.push(this.$toTime(o[0], "yyyy-MM-dd"));
               } else if (date_flag === "时间") {
@@ -422,11 +428,11 @@ export default {
           "&groupby=" +
           group_by_value,
         data,
-        (json) => {
+        json => {
           if (json.result) {
             let xAxis = [];
             let values = [];
-            json.result.list.map((o) => {
+            json.result.list.map(o => {
               if (date_flag === "日期") {
                 xAxis.push(this.$toTime(o[0], "yyyy-MM-dd"));
               } else if (date_flag === "时间") {
@@ -446,7 +452,7 @@ export default {
           }
         }
       );
-    },
+    }
   },
   computed: {
     recognitionHeight() {
@@ -454,8 +460,8 @@ export default {
     },
     recognitionUrl() {
       return "https://www.faceplusplus.com.cn/${model.filter.recognitionType}/";
-    },
-  },
+    }
+  }
 };
 </script>
 

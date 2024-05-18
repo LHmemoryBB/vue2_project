@@ -367,15 +367,15 @@ const routes = [
             }
         },
             // 民宿退款路由
-        {
-            path: '/refunds_for_homestays/table',
-            name: 'refunds_for_homestays_table',
-            component: () => import('../views/refunds_for_homestays/table.vue'),
-            meta: {
-                index: 0,
-                title: '民宿退款列表'
-            }
-        },
+        // {
+        //     path: '/refunds_for_homestays/table',
+        //     name: 'refunds_for_homestays_table',
+        //     component: () => import('../views/refunds_for_homestays/table.vue'),
+        //     meta: {
+        //         index: 0,
+        //         title: '民宿退款列表'
+        //     }
+        // },
         {
             path: '/refunds_for_homestays/view',
             name: 'refunds_for_homestays_view',
