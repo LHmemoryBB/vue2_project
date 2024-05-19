@@ -99,6 +99,13 @@
         min-width="200"
       ></el-table-column>
       <el-table-column
+        prop="time_period"
+        @sort-change="$sortChange"
+        label="预约时间段"
+        v-if="user_group == '管理员' || $check_field('get','time_period')"
+        min-width="200"
+      ></el-table-column>
+      <el-table-column
         prop="regular_users"
         @sort-change="$sortChange"
         label="普通用户"
